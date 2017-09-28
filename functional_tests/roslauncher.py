@@ -36,6 +36,9 @@ class Roslauncher(object):
             self.args = [self.ros, f.getName()]
             self.proc = sub.Popen(self.args, stdout=sub.PIPE, stderr=sub.PIPE)
 
+    def terminate(self):
+        self.proc.terminate()
+
 
 if __name__ == '__main__':
     pass

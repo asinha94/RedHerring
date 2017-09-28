@@ -14,19 +14,24 @@ class FunctionalTestError(Exception):
 
 
 class StreamWriter:
-    def __init__(self, stdout):
+    def __init__(self, stdout, prefix):
         self.stdout = stdout
+        self.prefix = '[{0}]'.format(prefix)
 
     def write(self, data):
         if data.strip():
-            self.stdout.put(data.rstrip())
+            self.print_func(data.rstrip())
+
+    def print_func(self, data):
+        msg_string = '{0}: {1}'.format(self.prefix, data)
+        self.stdout.put(msg_string)
 
     def flush(self):
         pass
 
 
 def process_handler(device_class, stdoutQueue, paramQueue):
-    sys.stdout = StreamWriter(stdoutQueue)
+    sys.stdout = StreamWriter(stdoutQueue, device_class.__name__)
     a = device_class()
     paramQueue.put((device_class, a.getParameters()))
     a.start()
@@ -47,8 +52,6 @@ class ProcessManager:
         for dev_dir in device_folders:
             device = os.path.basename(os.path.normpath(dev_dir))
             module_name = '{0}.{1}.{1}'.format(ros_node_directory, device)
-            if device != 'motor_controller':
-                continue
             try:
                 module = importlib.import_module(module_name)
             except RuntimeWarning, e:
@@ -86,6 +89,7 @@ class ProcessManager:
         
     def start_print_loop(self):
         """Just loops and prints anything placed in the shared queue"""
+        print 'do I get here?'
         while self.unfinished_processes > 0:
             try:
                 print self.stdout.get_nowait()
@@ -127,7 +131,12 @@ if __name__ == '__main__':
     manager.start()
     named_parameters = merge_dict(manager.devices)
     print named_parameters
-    raise SystemExit
-    launcher = Roslauncher(named_parameters)
-    while True:
-        pass
+    # raise SystemExit
+    # launcher = Roslauncher(named_parameters)
+    try:
+        manager.start_print_loop()
+    finally:
+        launcher.terminate()
+        manager.terminate()
+        manager.empty_print_buffer()
+        
